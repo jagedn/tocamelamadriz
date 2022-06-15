@@ -24,8 +24,8 @@ export default {
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
     ],
     script:[
-      {
-        src:"https://d3js.org/d3-voronoi.v1.min.js"
+      {        
+        src: "https://npmcdn.com/@turf/turf/turf.min.js", hid: "stripe" , defer: true
       }
     ]
   },

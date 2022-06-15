@@ -1,7 +1,7 @@
 <template>
     <v-container class="map" fluid>
       <client-only>
-        <l-map :zoom="zoom" :center="center" ref="myMap" @ready="doSomethingOnReady()">
+        <l-map :zoom="zoom" :center="center" ref="myMap" @ready="doSomethingOnReady()" :maxBounds="bounds">
           
           <l-tile-layer url="http://{s}.tile.osm.org/{z}/{x}/{y}.png" :attribution="attribution"></l-tile-layer>
           
@@ -39,8 +39,10 @@ export default {
     return{            
       attribution:'&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors and DecideMadrid',
       geojson: null,
-      zoom: 18,
+      zoom: 20,
       center: [40.41879,-3.6866426],
+      bounds: [40, -4, 40.6, -3.3],
+      bounds2:[-4, 40, -3.3, 40.6],
       currentItem:{},      
       currentSong:null,
     }
@@ -58,16 +60,16 @@ export default {
       this.data = await response.data;
       
       let index = 0;      
-      let geojson = {
+      const geojson = {
         type: "FeatureCollection",
         features: []
       };
+
       this.total=0
-      let headers = []
-      
+
+      let headers = []      
       const floatValues =  /[+-]?([0-9]*[.])?[0-9]+/;
- 
-      let voronoi = []
+
       this.data.split('\n').forEach( (l)=>{
         if( index++ == 0){
           headers = l.split(";")
@@ -90,31 +92,31 @@ export default {
             }
           }
           geojson.features.push(add)
-          voronoi.push( [properties.latitud, properties.longitud] )
           this.total++
         }
       })       
-      this.geojson = geojson
-      this.zoom = 18;    
 
-      const options = {
-        type: "voronoi",
-        pathStyleOption: {
-          color: "blue"
-        }
-      };
-      const partition = L.partition(options);
-      partition.setData(voronoi);
-      
-      window.map = this.map
-      const layerGroup = partition.addTo(map);
-
+      this.geojson = geojson      
+      this.zoom = 20;
       this.$nextTick(() => this.centerAtStartup())
     },
 
     centerAtStartup(){
-      this.current=Math.floor(Math.random()*this.total)
-      this.flyTo();
+      this.current=Math.floor(Math.random()*this.total)      
+      
+      const points = turf.voronoi(this.geojson,{
+        bbox:this.bounds2
+      })      
+      const voronoi = {
+        type: "FeatureCollection",
+        features: []
+      };
+      points.features.forEach( (x)=>{
+        voronoi.features.push(x)
+      })
+      L.geoJSON(voronoi).addTo(this.map)
+            
+      this.$nextTick(() => this.flyTo())
     },
 
     flyTo(){

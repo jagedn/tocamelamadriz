@@ -1,11 +1,10 @@
 const axios = require("axios")
-
+const fs = require('fs')
 const version = 'main'
 
 exports.handler = async function(event, context) {
     console.log(`pidiendo ruta`)
-    const csv = await axios.get(`https://raw.githubusercontent.com/jagedn/madriz-geocanciones/${version}/lista.csv`)
-    console.log(csv.data)
+    let csv =  await axios.get(`https://raw.githubusercontent.com/jagedn/madriz-geocanciones/${version}/lista.csv`)
     return {
         statusCode: 200,
         headers: {
