@@ -39,10 +39,9 @@ export default {
     return{            
       attribution:'&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors and DecideMadrid',
       geojson: null,
-      zoom: 20,
+      zoom: 16,
       center: [40.41879,-3.6866426],
-      bounds: [40, -4, 40.6, -3.3],
-      bounds2:[-4, 40, -3.3, 40.6],
+      bounds: [40, -4.1, 40.6, -3.3],
       currentItem:{},      
       currentSong:null,
     }
@@ -50,7 +49,10 @@ export default {
 
   methods: {
     doSomethingOnReady() {
-        this.map = this.$refs.myMap.mapObject;
+        this.bounds2 = [ this.bounds[1], this.bounds[0], this.bounds[3], this.bounds[2]]
+        this.map = this.$refs.myMap.mapObject;        
+        const me = this;
+        this.map.on('click', (e)=>{me.onClick(e)})
         this.downloadGeoJson()
     },
 
@@ -97,13 +99,7 @@ export default {
       })       
 
       this.geojson = geojson      
-      this.zoom = 20;
-      this.$nextTick(() => this.centerAtStartup())
-    },
-
-    centerAtStartup(){
-      this.current=Math.floor(Math.random()*this.total)      
-      
+            
       const points = turf.voronoi(this.geojson,{
         bbox:this.bounds2
       })      
@@ -115,15 +111,40 @@ export default {
         voronoi.features.push(x)
       })
       L.geoJSON(voronoi).addTo(this.map)
-            
-      this.$nextTick(() => this.flyTo())
+
+      this.$nextTick(() => this.centerAtStartup())
     },
 
-    flyTo(){
-      this.currentItem = this.geojson.features[this.current]
-      this.currentSong = this.currentItem.properties.link
-      this.map.flyTo(L.latLng(this.currentItem.geometry.coordinates[1], this.currentItem.geometry.coordinates[0]), 18)
+    centerAtStartup(){
+      this.zoom = 20;
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition( (position)=>{
+          this.$nextTick( ()=> this.flyTo([position.coords.longitude, position.coords.latitude]) )
+        }, ()=>{
+          this.$nextTick(() => this.flyTo())
+        });
+      } else {
+        this.$nextTick(() => this.flyTo())
+      }      
     },
+
+    flyTo( coordinates ){
+      if( !coordinates ){
+        const random =Math.floor(Math.random()*this.total)                  
+        this.currentItem = this.geojson.features[random]
+      }else{
+        var targetPoint = turf.point(coordinates);
+        var nearest = turf.nearestPoint(targetPoint, this.geojson);
+        this.currentItem = nearest;
+      }      
+      this.currentSong = this.currentItem.properties.link
+      this.map.flyTo(L.latLng(this.currentItem.geometry.coordinates[1], this.currentItem.geometry.coordinates[0]), 14)
+    },
+
+    onClick(e){
+        var popLocation= e.latlng;
+        this.flyTo([popLocation.lng, popLocation.lat])
+    }
 
   },
 
